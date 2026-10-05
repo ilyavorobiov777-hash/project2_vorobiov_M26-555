@@ -60,6 +60,7 @@ def create_cacher():
     cache = {}
 
     def cache_result(key, value_func):
+        """Возвращает результат из кэша или вычисляет и запоминает его."""
         if key in cache:
             return cache[key]
         result = value_func()

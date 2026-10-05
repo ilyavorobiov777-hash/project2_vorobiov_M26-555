@@ -1,6 +1,11 @@
 [project]
 name = "project2-vorobiov-m26-555"
 version = "0.1.0"
+description = "Консольная примитивная база данных на Python: таблицы и CRUD-операции в JSON-файлах"
+authors = [
+    { name = "Ilya Vorobiov", email = "ivorobiov79@yandex.ru" },
+]
+readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "prettytable>=3.18.0",

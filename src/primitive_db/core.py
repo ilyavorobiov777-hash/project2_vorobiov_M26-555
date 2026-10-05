@@ -117,6 +117,7 @@ def select(table_data, where_clause=None):
     """Возвращает все записи или только те, что подходят под условие."""
 
     def find_records():
+        """Отбирает записи по условию."""
         if where_clause is None:
             return table_data
         result = []

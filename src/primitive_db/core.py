@@ -16,11 +16,16 @@ def create_table(metadata, table_name, columns):
     if table_name in metadata:
         print(f'Ошибка: Таблица "{table_name}" уже существует.')
         return metadata
+    names = []
     for column in columns:
         parts = column.split(":")
-        if len(parts) != 2 or parts[1] not in VALID_TYPES:
+        if len(parts) != 2 or parts[0] == "" or parts[1] not in VALID_TYPES:
             print(f"Некорректное значение: {column}. Попробуйте снова.")
             return metadata
+        if parts[0] == "ID" or parts[0] in names:
+            print(f'Ошибка: Столбец "{parts[0]}" повторяется.')
+            return metadata
+        names.append(parts[0])
     metadata[table_name] = [ID_COLUMN] + columns
     save_table_data(table_name, [])
     columns_text = ", ".join(metadata[table_name])

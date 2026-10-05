@@ -7,11 +7,15 @@ def parse_value(text):
         return True
     if text.lower() == "false":
         return False
-    return int(text)
+    if text.lstrip("-").isdigit():
+        return int(text)
+    raise ValueError(f"{text}. Строки нужно писать в кавычках.")
 
 
 def parse_condition(text):
     """Превращает строку вида age = 28 в словарь {"age": 28}."""
+    if "=" not in text:
+        raise ValueError(f"в условии нет знака =: {text.strip()}")
     column, value = text.split("=", 1)
     return {column.strip(): parse_value(value)}
 

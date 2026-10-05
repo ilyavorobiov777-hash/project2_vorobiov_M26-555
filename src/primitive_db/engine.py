@@ -16,6 +16,7 @@ from src.primitive_db.core import (
     table_exists,
     update,
 )
+from src.primitive_db.decorators import handle_db_errors
 from src.primitive_db.parser import parse_condition, parse_set, parse_values
 from src.primitive_db.utils import (
     load_metadata,
@@ -74,7 +75,8 @@ def handle_insert(metadata, user_input, args):
     values = parse_values(user_input.split(" values ", 1)[1])
     table_data = load_table_data(table_name)
     table_data = insert(metadata, table_name, values, table_data)
-    save_table_data(table_name, table_data)
+    if table_data is not None:
+        save_table_data(table_name, table_data)
 
 
 def handle_select(metadata, user_input, args):
@@ -95,7 +97,8 @@ def handle_select(metadata, user_input, args):
             return
     table_data = load_table_data(table_name)
     records = select(table_data, where_clause)
-    print_records(metadata, table_name, records)
+    if records is not None:
+        print_records(metadata, table_name, records)
 
 
 def handle_update(metadata, user_input, args):
@@ -115,7 +118,8 @@ def handle_update(metadata, user_input, args):
         return
     table_data = load_table_data(table_name)
     table_data = update(table_name, table_data, set_clause, where_clause)
-    save_table_data(table_name, table_data)
+    if table_data is not None:
+        save_table_data(table_name, table_data)
 
 
 def handle_delete(metadata, user_input, args):
@@ -131,7 +135,8 @@ def handle_delete(metadata, user_input, args):
         return
     table_data = load_table_data(table_name)
     table_data = delete(table_name, table_data, where_clause)
-    save_table_data(table_name, table_data)
+    if table_data is not None:
+        save_table_data(table_name, table_data)
 
 
 def handle_info(metadata, user_input, args):
@@ -146,50 +151,51 @@ def handle_info(metadata, user_input, args):
     info(metadata, table_name, table_data)
 
 
+@handle_db_errors
+def execute_command(metadata, user_input):
+    """Разбирает введенную команду и вызывает нужную функцию."""
+    args = shlex.split(user_input)
+    if not args:
+        return
+    command = args[0]
+    if command == "help":
+        print_help()
+    elif command == "list_tables":
+        list_tables(metadata)
+    elif command == "create_table":
+        if len(args) < 3:
+            print(f"Некорректное значение: {user_input}. Попробуйте снова.")
+            return
+        new_metadata = create_table(metadata, args[1], args[2:])
+        if new_metadata is not None:
+            save_metadata(META_FILE, new_metadata)
+    elif command == "drop_table":
+        if len(args) != 2:
+            print(f"Некорректное значение: {user_input}. Попробуйте снова.")
+            return
+        new_metadata = drop_table(metadata, args[1])
+        if new_metadata is not None:
+            save_metadata(META_FILE, new_metadata)
+    elif command == "insert":
+        handle_insert(metadata, user_input, args)
+    elif command == "select":
+        handle_select(metadata, user_input, args)
+    elif command == "update":
+        handle_update(metadata, user_input, args)
+    elif command == "delete":
+        handle_delete(metadata, user_input, args)
+    elif command == "info":
+        handle_info(metadata, user_input, args)
+    else:
+        print(f"Функции {command} нет. Попробуйте снова.")
+
+
 def run():
     """Запускает основной цикл программы."""
     print_help()
     while True:
         metadata = load_metadata(META_FILE)
         user_input = prompt.string(">>>Введите команду: ")
-        try:
-            args = shlex.split(user_input)
-        except ValueError:
-            print(f"Некорректное значение: {user_input}. Попробуйте снова.")
-            continue
-        if not args:
-            continue
-        command = args[0]
-        try:
-            if command == "exit":
-                break
-            elif command == "help":
-                print_help()
-            elif command == "list_tables":
-                list_tables(metadata)
-            elif command == "create_table":
-                if len(args) < 3:
-                    print(f"Некорректное значение: {user_input}. Попробуйте снова.")
-                    continue
-                metadata = create_table(metadata, args[1], args[2:])
-                save_metadata(META_FILE, metadata)
-            elif command == "drop_table":
-                if len(args) != 2:
-                    print(f"Некорректное значение: {user_input}. Попробуйте снова.")
-                    continue
-                metadata = drop_table(metadata, args[1])
-                save_metadata(META_FILE, metadata)
-            elif command == "insert":
-                handle_insert(metadata, user_input, args)
-            elif command == "select":
-                handle_select(metadata, user_input, args)
-            elif command == "update":
-                handle_update(metadata, user_input, args)
-            elif command == "delete":
-                handle_delete(metadata, user_input, args)
-            elif command == "info":
-                handle_info(metadata, user_input, args)
-            else:
-                print(f"Функции {command} нет. Попробуйте снова.")
-        except ValueError:
-            print(f"Некорректное значение: {user_input}. Попробуйте снова.")
+        if user_input.strip() == "exit":
+            break
+        execute_command(metadata, user_input)

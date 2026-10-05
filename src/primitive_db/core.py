@@ -1,7 +1,16 @@
 from src.primitive_db.constants import ID_COLUMN, VALID_TYPES
+from src.primitive_db.decorators import (
+    confirm_action,
+    create_cacher,
+    handle_db_errors,
+    log_time,
+)
 from src.primitive_db.utils import save_table_data
 
+select_cache = create_cacher()
 
+
+@handle_db_errors
 def create_table(metadata, table_name, columns):
     """Создает таблицу и добавляет ее описание в метаданные."""
     if table_name in metadata:
@@ -19,6 +28,8 @@ def create_table(metadata, table_name, columns):
     return metadata
 
 
+@handle_db_errors
+@confirm_action("удаление таблицы")
 def drop_table(metadata, table_name):
     """Удаляет таблицу из метаданных."""
     if table_name not in metadata:
@@ -76,6 +87,8 @@ def matches(record, where_clause):
     return True
 
 
+@handle_db_errors
+@log_time
 def insert(metadata, table_name, values, table_data):
     """Добавляет новую запись в таблицу и сама назначает ей ID."""
     column_types = get_column_types(metadata, table_name)
@@ -98,17 +111,25 @@ def insert(metadata, table_name, values, table_data):
     return table_data
 
 
+@handle_db_errors
+@log_time
 def select(table_data, where_clause=None):
     """Возвращает все записи или только те, что подходят под условие."""
-    if where_clause is None:
-        return table_data
-    result = []
-    for record in table_data:
-        if matches(record, where_clause):
-            result.append(record)
-    return result
+
+    def find_records():
+        if where_clause is None:
+            return table_data
+        result = []
+        for record in table_data:
+            if matches(record, where_clause):
+                result.append(record)
+        return result
+
+    cache_key = f"{where_clause}|{table_data}"
+    return select_cache(cache_key, find_records)
 
 
+@handle_db_errors
 def update(table_name, table_data, set_clause, where_clause):
     """Меняет поля у записей, которые подходят под условие."""
     if "ID" in set_clause:
@@ -128,6 +149,8 @@ def update(table_name, table_data, set_clause, where_clause):
     return table_data
 
 
+@handle_db_errors
+@confirm_action("удаление записи")
 def delete(table_name, table_data, where_clause):
     """Удаляет записи, которые подходят под условие."""
     result = []
@@ -144,6 +167,7 @@ def delete(table_name, table_data, where_clause):
     return result
 
 
+@handle_db_errors
 def info(metadata, table_name, table_data):
     """Печатает описание таблицы и количество записей."""
     print(f"Таблица: {table_name}")
